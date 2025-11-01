@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -28,12 +28,52 @@ async function run() {
     // Connect the client to the server
     await client.connect();
 
+    // Create database & product colleciton
     const db = client.db("smart_deals_db");
     const productCollection = db.collection("products");
 
+    // Data Get
+    app.get("/products", async (req, res) => {
+      const cursor = productCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // Data find 
+    app.get("/products/:id", async(req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await productCollection.findOne(filter);
+      res.send(result);
+    })
+
+    // Data store
     app.post("/products", async (req, res) => {
       const newProduct = req.body;
       const result = await productCollection.insertOne(newProduct);
+      res.send(result);
+    });
+
+    // Data Update
+    app.patch("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedProduct = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          name: updatedProduct.name,
+          price: updatedProduct.price,
+        },
+      };
+      const result = await productCollection.updateOne(filter, update);
+      res.send(result);
+    });
+
+    // Data delete
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await productCollection.deleteOne(qurey);
       res.send(result);
     });
 
@@ -51,8 +91,6 @@ run().catch(console.dir);
 app.listen(port, () => {
   console.log(`smart server is running ${port}`);
 });
-
-
 
 // differen way connect database
 // client
