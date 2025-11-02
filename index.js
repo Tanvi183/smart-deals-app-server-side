@@ -34,18 +34,25 @@ async function run() {
 
     // Data Get
     app.get("/products", async (req, res) => {
-      const cursor = productCollection.find();
+      // product's items
+      const productFields = { title: 1, price_min: 1, price_max: 1 };
+      const cursor = productCollection
+        .find()
+        .sort({ price_min: -1 })
+        .skip(2)
+        .limit(5)
+        .project(productFields);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    // Data find 
-    app.get("/products/:id", async(req, res) => {
+    // Data find
+    app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await productCollection.findOne(filter);
       res.send(result);
-    })
+    });
 
     // Data store
     app.post("/products", async (req, res) => {
