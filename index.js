@@ -32,6 +32,23 @@ async function run() {
     const db = client.db("smart_deals_db");
     const productCollection = db.collection("products");
     const bidsCollection = db.collection("bids");
+    const usersCollection = db.collection("users");
+
+    app.post("/users", async (req, res) => {
+      const newUser = req.body;
+      const femail = newUser.email;
+      const query = { email: femail };
+      const exitingUser = await usersCollection.findOne(query);
+      
+      if (exitingUser) {
+        res.send({
+          message: "user already exits. do not need to insert again",
+        });
+      } else {
+        const result = await usersCollection.insertOne(newUser);
+        res.send(result);
+      }
+    });
 
     // Data Get
     app.get("/products", async (req, res) => {
