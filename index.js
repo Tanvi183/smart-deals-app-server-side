@@ -39,7 +39,7 @@ async function run() {
       const femail = newUser.email;
       const query = { email: femail };
       const exitingUser = await usersCollection.findOne(query);
-      
+
       if (exitingUser) {
         res.send({
           message: "user already exits. do not need to insert again",
@@ -108,6 +108,13 @@ async function run() {
       const id = req.params.id;
       const qurey = { _id: new ObjectId(id) };
       const result = await productCollection.deleteOne(qurey);
+      res.send(result);
+    });
+
+    // Latest Products Api
+    app.get("/latest-products", async (req, res) => {
+      const cursor = productCollection.find().sort({created_at: -1}).limit(6);
+      const result = await cursor.toArray();
       res.send(result);
     });
 
