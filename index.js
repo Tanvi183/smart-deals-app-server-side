@@ -81,6 +81,15 @@ async function run() {
       res.send(result);
     });
 
+    // How much bids are particular product
+    app.get("/product/bids/:productId", async (req, res) => {
+      const productId = req.params.productId;
+      const qurey = {product : productId};
+      const cursor = bidsCollection.find(qurey).sort({birds_price: -1});
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     // Data store
     app.post("/products", async (req, res) => {
       const newProduct = req.body;
@@ -113,12 +122,13 @@ async function run() {
 
     // Latest Products Api
     app.get("/latest-products", async (req, res) => {
-      const cursor = productCollection.find().sort({created_at: -1}).limit(6);
+      const cursor = productCollection.find().sort({ created_at: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
 
     // Bids Related Apis
+    //My bids & all bids
     app.get("/bids", async (req, res) => {
       const email = req.query.email;
       const query = {};
