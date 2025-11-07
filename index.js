@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -8,8 +9,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const uri =
-  "mongodb+srv://smartDealsDBUser:MSKT2W4dkGeYVs7S@simple-crud-server.7fhuvu7.mongodb.net/?appName=simple-crud-server";
+const uri = process.env.atlas_URL;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -84,8 +84,8 @@ async function run() {
     // How much bids are particular product
     app.get("/product/bids/:productId", async (req, res) => {
       const productId = req.params.productId;
-      const qurey = {product : productId};
-      const cursor = bidsCollection.find(qurey).sort({birds_price: -1});
+      const qurey = { product: productId };
+      const cursor = bidsCollection.find(qurey).sort({ birds_price: -1 });
       const result = await cursor.toArray();
       res.send(result);
     });
