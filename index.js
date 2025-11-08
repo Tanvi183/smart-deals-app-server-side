@@ -3,11 +3,46 @@ const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
+
+// Firebase Admin SDK
+const serviceAccount = require("./smart-deals-app-firebase-adminsdk.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 // middleware
 app.use(cors());
 app.use(express.json());
+
+const logger = (req, res, next) => {
+  console.log("logging Info");
+  next();
+};
+
+const verifyFireBaseToken = async (req, res, next) => {
+  // Have token or not
+  // console.log('hader', req.headers.authorization);
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  // Validate the token
+  try {
+    const userInfo = await admin.auth().verifyIdToken(token);
+    req.token_email = userInfo.email;
+    // console.log("after token validation", userInfo);
+    next();
+  } catch {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+};
 
 const uri = process.env.atlas_URL;
 
@@ -82,7 +117,7 @@ async function run() {
     });
 
     // How much bids are particular product
-    app.get("/product/bids/:productId", async (req, res) => {
+    app.get("/product/bids/:productId", verifyFireBaseToken, async (req, res) => {
       const productId = req.params.productId;
       const qurey = { product: productId };
       const cursor = bidsCollection.find(qurey).sort({ birds_price: -1 });
@@ -129,11 +164,18 @@ async function run() {
 
     // Bids Related Apis
     //My bids & all bids
-    app.get("/bids", async (req, res) => {
+    app.get("/bids", logger, verifyFireBaseToken, async (req, res) => {
+      // console.log('headers', req.headers);
+
       const email = req.query.email;
       const query = {};
       if (email) {
         query.buyer_email = email;
+      }
+
+      // verify user have access to see this data
+      if (email !== req.token_email) {
+        return res.status(403).send({ message: "forbidden access" });
       }
 
       const cursor = bidsCollection.find(query);
