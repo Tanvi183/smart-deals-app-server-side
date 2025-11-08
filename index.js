@@ -5,6 +5,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
+const jwt = require("jsonwebtoken");
 
 // Firebase Admin SDK
 const serviceAccount = require("./smart-deals-app-firebase-adminsdk.json");
@@ -21,6 +22,7 @@ const logger = (req, res, next) => {
   next();
 };
 
+// use firebase token to verify user's
 const verifyFireBaseToken = async (req, res, next) => {
   // Have token or not
   // console.log('hader', req.headers.authorization);
@@ -33,7 +35,7 @@ const verifyFireBaseToken = async (req, res, next) => {
     return res.status(401).send({ message: "unauthorized access" });
   }
 
-  // Validate the token
+  // verify the token
   try {
     const userInfo = await admin.auth().verifyIdToken(token);
     req.token_email = userInfo.email;
@@ -42,6 +44,27 @@ const verifyFireBaseToken = async (req, res, next) => {
   } catch {
     return res.status(401).send({ message: "unauthorized access" });
   }
+};
+
+// use jwt token to verify user's
+const verifyJWTToken = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  const token = authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    // put it in the right place
+    console.log("after decoded", decoded);
+    req.token_email = decoded.email;
+    next();
+  });
 };
 
 const uri = process.env.atlas_URL;
@@ -69,6 +92,16 @@ async function run() {
     const bidsCollection = db.collection("bids");
     const usersCollection = db.collection("users");
 
+    // JWT related api
+    app.post("/getToken", (req, res) => {
+      const loggedUser = req.body;
+      const token = jwt.sign(loggedUser, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token: token });
+    });
+
+    // USERS APIs
     app.post("/users", async (req, res) => {
       const newUser = req.body;
       const femail = newUser.email;
@@ -117,13 +150,17 @@ async function run() {
     });
 
     // How much bids are particular product
-    app.get("/product/bids/:productId", verifyFireBaseToken, async (req, res) => {
-      const productId = req.params.productId;
-      const qurey = { product: productId };
-      const cursor = bidsCollection.find(qurey).sort({ birds_price: -1 });
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+    app.get(
+      "/product/bids/:productId",
+      verifyFireBaseToken,
+      async (req, res) => {
+        const productId = req.params.productId;
+        const qurey = { product: productId };
+        const cursor = bidsCollection.find(qurey).sort({ birds_price: -1 });
+        const result = await cursor.toArray();
+        res.send(result);
+      }
+    );
 
     // Data store
     app.post("/products", async (req, res) => {
@@ -163,10 +200,28 @@ async function run() {
     });
 
     // Bids Related Apis
-    //My bids & all bids
-    app.get("/bids", logger, verifyFireBaseToken, async (req, res) => {
-      // console.log('headers', req.headers);
+    //My bids & all bids verify with firebase token
+    // app.get("/bids", logger, verifyFireBaseToken, async (req, res) => {
+    //   // console.log('headers', req.headers);
 
+    //   const email = req.query.email;
+    //   const query = {};
+    //   if (email) {
+    //     query.buyer_email = email;
+    //   }
+
+    //   // verify user have access to see this data
+    //   if (email !== req.token_email) {
+    //     return res.status(403).send({ message: "forbidden access" });
+    //   }
+
+    //   const cursor = bidsCollection.find(query);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
+
+    // verify by jwt-token
+    app.get("/bids", verifyJWTToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
