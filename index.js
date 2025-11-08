@@ -164,6 +164,8 @@ async function run() {
 
     // Data store
     app.post("/products", async (req, res) => {
+      // console.log('headers in the post', req.headers);
+
       const newProduct = req.body;
       const result = await productCollection.insertOne(newProduct);
       res.send(result);
@@ -201,27 +203,9 @@ async function run() {
 
     // Bids Related Apis
     //My bids & all bids verify with firebase token
-    // app.get("/bids", logger, verifyFireBaseToken, async (req, res) => {
-    //   // console.log('headers', req.headers);
+    app.get("/bids", logger, verifyFireBaseToken, async (req, res) => {
+      // console.log('headers', req.headers);
 
-    //   const email = req.query.email;
-    //   const query = {};
-    //   if (email) {
-    //     query.buyer_email = email;
-    //   }
-
-    //   // verify user have access to see this data
-    //   if (email !== req.token_email) {
-    //     return res.status(403).send({ message: "forbidden access" });
-    //   }
-
-    //   const cursor = bidsCollection.find(query);
-    //   const result = await cursor.toArray();
-    //   res.send(result);
-    // });
-
-    // verify by jwt-token
-    app.get("/bids", verifyJWTToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
@@ -237,6 +221,24 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    // verify by jwt-token
+    // app.get("/bids", verifyJWTToken, async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = {};
+    //   if (email) {
+    //     query.buyer_email = email;
+    //   }
+
+    //   // verify user have access to see this data
+    //   if (email !== req.token_email) {
+    //     return res.status(403).send({ message: "forbidden access" });
+    //   }
+
+    //   const cursor = bidsCollection.find(query);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
 
     app.post("/bids", async (req, res) => {
       const newBid = req.body;
